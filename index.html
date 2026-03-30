@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ЕнакиевоТакси</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --card: #1a1a1a;
+    --card2: #222;
+    --accent: #f5c518;
+    --accent2: #e6b800;
+    --green: #22c55e;
+    --red: #ef4444;
+    --text: #f0f0f0;
+    --sub: #999;
+    --border: #2a2a2a;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; overflow-x: hidden; }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-icon { font-size: 28px; }
+  .header-title { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: -0.3px; }
+  .header-sub { font-size: 12px; color: var(--sub); margin-top: 1px; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 65px; z-index: 99;
+  }
+  .tab {
+    flex: 1;
+    padding: 13px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sub);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* PAGES */
+  .page { display: none; padding: 16px; padding-bottom: 100px; }
+  .page.active { display: block; }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--sub);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 20px 0 8px;
+  }
+  .section-label:first-child { margin-top: 4px; }
+
+  /* INPUT GROUP */
+  .input-group { margin-bottom: 12px; }
+  .input-label {
+    font-size: 13px;
+    color: var(--sub);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .input-field {
+    width: 100%;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 13px 16px;
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .input-field:focus { border-color: var(--accent); }
+  .input-field::placeholder { color: #444; }
+  textarea.input-field { resize: none; height: 72px; font-family: inherit; }
+
+  /* DISTANCE ROW */
+  .dist-row { display: flex; gap: 10px; align-items: flex-end; }
+  .dist-row .input-group { flex: 1; margin-bottom: 0; }
+  .dist-hint {
+    background: var(--card2);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--sub);
+    white-space: nowrap;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    min-width: 100px;
+  }
+  .dist-hint span { color: var(--accent); font-weight: 700; }
+
+  /* PRICE CARD */
+  .price-card {
+    background: linear-gradient(135deg, #1e1a00 0%, #1a1a1a 100%);
+    border: 1.5px solid #3a3000;
+    border-radius: var(--radius);
+    padding: 16px;
+    margin: 16px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .price-label { font-size: 13px; color: var(--sub); }
+  .price-value { font-size: 26px; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; }
+  .price-info { font-size: 11px; color: #666; margin-top: 2px; }
+  .price-eta { text-align: right; }
+  .eta-value { font-size: 18px; font-weight: 700; color: var(--green); }
+
+  /* TYPE SELECTOR */
+  .type-selector { display: flex; gap: 10px; margin-bottom: 16px; }
+  .type-btn {
+    flex: 1;
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .type-btn.active { border-color: var(--accent); background: #1e1a00; }
+  .type-btn .type-icon { font-size: 24px; margin-bottom: 4px; }
+  .type-btn .type-name { font-size: 13px; font-weight: 600; color: var(--sub); }
+  .type-btn.active .type-name { color: var(--accent); }
+  .type-btn .type-price { font-size: 11px; color: #555; margin-top: 2px; }
+  .type-btn.active .type-price { color: #888; }
+
+  /* BOTTOM BUTTON */
+  .bottom-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 60%, transparent);
+    z-index: 200;
+  }
+  .submit-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: -0.2px;
+  }
+  .submit-btn:active { transform: scale(0.98); background: var(--accent2); }
+  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* INFO ROWS */
+  .info-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .info-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+  .info-content { flex: 1; }
+  .info-title { font-size: 13px; color: var(--sub); }
+  .info-value { font-size: 15px; font-weight: 600; margin-top: 1px; }
+
+  /* TARIFF CARD */
+  .tariff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tariff-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .tariff-item-icon { font-size: 22px; margin-bottom: 6px; }
+  .tariff-item-name { font-size: 13px; color: var(--sub); font-weight: 600; }
+  .tariff-item-price { font-size: 15px; font-weight: 700; color: var(--accent); margin-top: 4px; }
+  .tariff-item-detail { font-size: 11px; color: #555; margin-top: 2px; }
+
+  /* STATUS BADGE */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge.online { background: #0f2e1a; color: var(--green); border: 1px solid #1a4a2a; }
+  .badge.offline { background: #2e0f0f; color: var(--red); border: 1px solid #4a1a1a; }
+
+  /* QUICK ADDRESSES */
+  .quick-addresses { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .quick-addr-btn {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--sub);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .quick-addr-btn:active { background: #2a2a2a; color: var(--text); }
+
+  /* ANIMATION */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .page.active { animation: fadeIn 0.2s ease; }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  /* ALERT */
+  .alert {
+    background: #1a0f0f;
+    border: 1px solid #3a1a1a;
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #ff9999;
+    display: none;
+    margin-bottom: 12px;
+  }
+  .alert.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">🚕</div>
+  <div>
+    <div class="header-title">ЕнакиевоТакси</div>
+    <div class="header-sub" id="driverStatus">Загружаем статус...</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('order')">🚕 Заказ</div>
+  <div class="tab" onclick="switchTab('tariff')">🪙 Тарифы</div>
+  <div class="tab" onclick="switchTab('info')">ℹ️ Инфо</div>
+</div>
+
+<!-- PAGE: ORDER -->
+<div class="page active" id="page-order">
+
+  <div class="section-label">Тип заказа</div>
+  <div class="type-selector">
+    <div class="type-btn active" id="btn-taxi" onclick="selectType('taxi')">
+      <div class="type-icon">🚕</div>
+      <div class="type-name">Такси</div>
+      <div class="type-price">от 170 ₽</div>
+    </div>
+    <div class="type-btn" id="btn-delivery" onclick="selectType('delivery')">
+      <div class="type-icon">📦</div>
+      <div class="type-name">Доставка</div>
+      <div class="type-price">от 200 ₽</div>
+    </div>
+  </div>
+
+  <div class="alert" id="formAlert">⚠️ Пожалуйста, заполните все обязательные поля.</div>
+
+  <div class="section-label">📍 Маршрут</div>
+
+  <div class="input-group">
+    <div class="input-label">🔴 Откуда забрать</div>
+    <input class="input-field" id="fromAddr" type="text" placeholder="Улица, дом..." autocomplete="off" oninput="calcPrice()">
+    <div class="quick-addresses" id="quickFrom">
+      <div class="quick-addr-btn" onclick="setFrom('ул. Ленина, 1')">ул. Ленина, 1</div>
+      <div class="quick-addr-btn" onclick="setFrom('Центр города')">Центр</div>
+      <div class="quick-addr-btn" onclick="setFrom('Рынок')">Рынок</div>
+      <div class="quick-addr-btn" onclick="setFrom('Вокзал')">Вокзал</div>
+    </div>
+  </div>
+
+  <div class="input-group">
+    <div class="input-label">🟢 Куда ехать</div>
+    <input class="input-field" id="toAddr" type="text" placeholder="Улица, дом..." autocomplete="off" oninput="calcPrice()">
+    <div class="quick-addresses" id="quickTo">
+      <div class="quick-addr-btn" onclick="setTo('Больница')">Больница</div>
+      <div class="quick-addr-btn" onclick="setTo('Рынок')">Рынок</div>
+      <div class="quick-addr-btn" onclick="setTo('Центр')">Центр</div>
+      <div class="quick-addr-btn" onclick="setTo('Вокзал')">Вокзал</div>
+    </div>
+  </div>
+
+  <div class="section-label">↔️ Расстояние</div>
+  <div class="dist-row">
+    <div class="input-group">
+      <input class="input-field" id="distKm" type="number" placeholder="напр. 3.5" min="0.1" max="100" step="0.5" oninput="calcPrice()">
+    </div>
+    <div class="dist-hint" id="distHint">— км</div>
+  </div>
+
+  <div class="price-card" id="priceCard">
+    <div>
+      <div class="price-label">Стоимость поездки</div>
+      <div class="price-value" id="priceVal">—</div>
+      <div class="price-info" id="priceInfo">Введите расстояние</div>
+    </div>
+    <div class="price-eta">
+      <div class="price-label">Время в пути</div>
+      <div class="eta-value" id="etaVal">—</div>
+      <div class="price-info">мин</div>
+    </div>
+  </div>
+
+  <div class="section-label">✍️ Комментарий <span style="color:#555;font-size:10px;font-weight:400;text-transform:none;">(необязательно)</span></div>
+  <div class="input-group">
+    <textarea class="input-field" id="comment" placeholder="Особые пожелания, уточнения..."></textarea>
+  </div>
+
+</div>
+
+<!-- PAGE: TARIFF -->
+<div class="page" id="page-tariff">
+
+  <div class="section-label">Тарифы</div>
+  <div class="tariff-grid">
+    <div class="tariff-item">
+      <div class="tariff-item-icon">🚕</div>
+      <div class="tariff-item-name">Такси</div>
+      <div class="tariff-item-price">170 ₽</div>
+      <div class="tariff-item-detail">посадка</div>
+    </div>
+    <div class="tariff-item">
+      <div class="tariff-item-icon">🛣️</div>
+      <div class="tariff-item-name">За км (такси)</div>
+      <div class="tariff-item-price">40 ₽/км</div>
+      <div class="tariff-item-detail">сверх посадки</div>
+    </div>
+    <div class="tariff-item">
+      <div class="tariff-item-icon">📦</div>
+      <div class="tariff-item-name">Доставка</div>
+      <div class="tariff-item-price">200 ₽</div>
+      <div class="tariff-item-detail">посадка</div>
+    </div>
+    <div class="tariff-item">
+      <div class="tariff-item-icon">🛣️</div>
+      <div class="tariff-item-name">За км (доставка)</div>
+      <div class="tariff-item-price">50 ₽/км</div>
+      <div class="tariff-item-detail">сверх посадки</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">Примеры поездок</div>
+  <div class="info-card">
+    <div class="info-row">
+      <div class="info-icon">🚕</div>
+      <div class="info-content">
+        <div class="info-title">Такси, 3 км</div>
+        <div class="info-value">290 ₽</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-icon">🚕</div>
+      <div class="info-content">
+        <div class="info-title">Такси, 7 км</div>
+        <div class="info-value">450 ₽</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-icon">📦</div>
+      <div class="info-content">
+        <div class="info-title">Доставка, 5 км</div>
+        <div class="info-value">450 ₽</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-icon">📦</div>
+      <div class="info-content">
+        <div class="info-title">Доставка, 10 км</div>
+        <div class="info-value">700 ₽</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">Калькулятор стоимости</div>
+  <div class="input-group">
+    <div class="input-label">Введите расстояние (км)</div>
+    <input class="input-field" id="calcDist" type="number" placeholder="Например: 5" min="0" step="0.5" oninput="updateCalc()">
+  </div>
+  <div class="info-card" id="calcResult" style="display:none;">
+    <div class="info-row">
+      <div class="info-icon">🚕</div>
+      <div class="info-content">
+        <div class="info-title">Такси</div>
+        <div class="info-value" id="calcTaxi">—</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-icon">📦</div>
+      <div class="info-content">
+        <div class="info-title">Доставка</div>
+        <div class="info-value" id="calcDelivery">—</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- PAGE: INFO -->
+<div class="page" id="page-info">
+
+  <div class="section-label">О сервисе</div>
+  <div class="info-card">
+    <div class="info-row">
+      <div class="info-icon">🏘️</div>
+      <div class="info-content">
+        <div class="info-title">Город</div>
+        <div class="info-value">Енакиево (ДНР)</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-icon">🕐</div>
+      <div class="info-content">
+        <div class="info-title">Режим работы</div>
+        <div class="info-value">Круглосуточно</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-icon">🚗</div>
+      <div class="info-content">
+        <div class="info-title">Водителей онлайн</div>
+        <div class="info-value" id="infoDrivers">Загружаем...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">Как заказать?</div>
+  <div class="info-card">
+    <div class="info-row">
+      <div class="info-icon">1️⃣</div>
+      <div class="info-content">
+        <div class="info-title">Шаг 1</div>
+        <div class="info-value">Выберите тип: Такси или Доставка</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-icon">2️⃣</div>
+      <div class="info-content">
+        <div class="info-title">Шаг 2</div>
+        <div class="info-value">Введите откуда и куда ехать</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-icon">3️⃣</div>
+      <div class="info-content">
+        <div class="info-title">Шаг 3</div>
+        <div class="info-value">Укажите примерное расстояние</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-icon">4️⃣</div>
+      <div class="info-content">
+        <div class="info-title">Шаг 4</div>
+        <div class="info-value">Нажмите "Оформить заказ"</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-icon">5️⃣</div>
+      <div class="info-content">
+        <div class="info-title">Шаг 5</div>
+        <div class="info-value">Подтвердите в чате бота — и ждите водителя!</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM BUTTON -->
+<div class="bottom-bar" id="bottomBar">
+  <button class="submit-btn" id="submitBtn" onclick="submitOrder()">
+    <span>🚕</span>
+    <span id="submitText">Оформить заказ</span>
+  </button>
+</div>
+
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+  tg.ready();
+
+  // Apply Telegram theme
+  if (tg.colorScheme === 'light') {
+    document.documentElement.style.setProperty('--bg', '#f5f5f5');
+    document.documentElement.style.setProperty('--card', '#ffffff');
+    document.documentElement.style.setProperty('--card2', '#f0f0f0');
+    document.documentElement.style.setProperty('--text', '#111');
+    document.documentElement.style.setProperty('--sub', '#666');
+    document.documentElement.style.setProperty('--border', '#e0e0e0');
+  }
+
+  let orderType = 'taxi';
+
+  function selectType(type) {
+    orderType = type;
+    document.getElementById('btn-taxi').classList.toggle('active', type === 'taxi');
+    document.getElementById('btn-delivery').classList.toggle('active', type === 'delivery');
+    document.getElementById('submitBtn').querySelector('span:first-child').textContent = type === 'taxi' ? '🚕' : '📦';
+    calcPrice();
+  }
+
+  function setFrom(addr) {
+    document.getElementById('fromAddr').value = addr;
+    calcPrice();
+  }
+
+  function setTo(addr) {
+    document.getElementById('toAddr').value = addr;
+    calcPrice();
+  }
+
+  function calcPrice() {
+    const dist = parseFloat(document.getElementById('distKm').value);
+    const distHint = document.getElementById('distHint');
+    const priceVal = document.getElementById('priceVal');
+    const priceInfo = document.getElementById('priceInfo');
+    const etaVal = document.getElementById('etaVal');
+
+    if (isNaN(dist) || dist <= 0) {
+      distHint.innerHTML = '— км';
+      priceVal.textContent = '—';
+      priceInfo.textContent = 'Введите расстояние';
+      etaVal.textContent = '—';
+      return;
+    }
+
+    distHint.innerHTML = `<span>${dist}</span> км`;
+
+    let base, perKm;
+    if (orderType === 'delivery') {
+      base = 200; perKm = 50;
+    } else {
+      base = 170; perKm = 40;
+    }
+    const price = base + dist * perKm;
+    const eta = Math.max(3, Math.round(dist / 30 * 60));
+
+    priceVal.textContent = Math.round(price) + ' ₽';
+    priceInfo.textContent = `посадка ${base}₽ + ${dist}км × ${perKm}₽`;
+    etaVal.textContent = `~${eta}`;
+  }
+
+  function updateCalc() {
+    const dist = parseFloat(document.getElementById('calcDist').value);
+    const result = document.getElementById('calcResult');
+    if (isNaN(dist) || dist <= 0) {
+      result.style.display = 'none';
+      return;
+    }
+    result.style.display = 'block';
+    document.getElementById('calcTaxi').textContent = Math.round(170 + dist * 40) + ' ₽';
+    document.getElementById('calcDelivery').textContent = Math.round(200 + dist * 50) + ' ₽';
+  }
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', ['order','tariff','info'][i] === name);
+    });
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    document.getElementById('bottomBar').style.display = name === 'order' ? 'block' : 'none';
+  }
+
+  function submitOrder() {
+    const from = document.getElementById('fromAddr').value.trim();
+    const to = document.getElementById('toAddr').value.trim();
+    const dist = parseFloat(document.getElementById('distKm').value);
+    const comment = document.getElementById('comment').value.trim();
+    const alert = document.getElementById('formAlert');
+
+    if (!from || !to || isNaN(dist) || dist <= 0) {
+      alert.classList.add('show');
+      alert.textContent = '⚠️ Заполните: откуда, куда и расстояние.';
+      setTimeout(() => alert.classList.remove('show'), 3000);
+      return;
+    }
+    alert.classList.remove('show');
+
+    let base, perKm;
+    if (orderType === 'delivery') { base = 200; perKm = 50; }
+    else { base = 170; perKm = 40; }
+    const price = Math.round(base + dist * perKm);
+
+    const data = {
+      order_type: orderType,
+      from_address: from,
+      to_address: to,
+      distance: dist,
+      comment: comment,
+      price: price
+    };
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    document.getElementById('submitText').textContent = 'Отправляем...';
+
+    setTimeout(() => {
+      tg.sendData(JSON.stringify(data));
+    }, 300);
+  }
+
+  // Simulated driver status (replace with real API if needed)
+  function loadDriverStatus() {
+    const count = Math.floor(Math.random() * 5) + 1;
+    const el = document.getElementById('driverStatus');
+    el.innerHTML = count > 0
+      ? `<span style="color:#22c55e">●</span> ${count} водитель${count === 1 ? '' : count < 5 ? 'а' : 'ей'} онлайн`
+      : `<span style="color:#ef4444">●</span> Нет водителей`;
+    document.getElementById('infoDrivers').textContent = count + ' чел.';
+  }
+  loadDriverStatus();
+</script>
+</body>
+</html>
