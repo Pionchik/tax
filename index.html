@@ -5,161 +5,389 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ЕнакиевоТакси</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-  :root {
-    --bg: #0f0f0f;
-    --card: #1a1a1a;
-    --card2: #222;
-    --accent: #f5c518;
-    --accent2: #e6b800;
-    --green: #22c55e;
-    --red: #ef4444;
-    --text: #f0f0f0;
-    --sub: #999;
-    --border: #2a2a2a;
-    --radius: 14px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; overflow-x: hidden; }
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 
-  /* HEADER */
+  :root {
+    --bg: #0d0d0f;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --surface3: #252530;
+    --accent: #f5c518;
+    --accent-dim: rgba(245,197,24,0.12);
+    --accent-border: rgba(245,197,24,0.25);
+    --green: #22c55e;
+    --green-dim: rgba(34,197,94,0.12);
+    --red: #ef4444;
+    --red-dim: rgba(239,68,68,0.12);
+    --text: #f0f0f5;
+    --text2: #8b8b9a;
+    --text3: #525260;
+    --border: rgba(255,255,255,0.07);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', system-ui, sans-serif;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== HEADER ===== */
   .header {
-    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
-    padding: 16px 20px 14px;
+    background: var(--surface);
     border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    position: sticky; top: 0; z-index: 100;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 300;
+    backdrop-filter: blur(20px);
   }
-  .header-icon { font-size: 28px; }
-  .header-title { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: -0.3px; }
-  .header-sub { font-size: 12px; color: var(--sub); margin-top: 1px; }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header-logo {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .header-title { font-size: 16px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
+  .header-sub { font-size: 11px; color: var(--text2); margin-top: 1px; font-weight: 500; }
 
-  /* TABS */
+  .driver-badge {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    border-radius: 100px;
+    font-size: 12px; font-weight: 700;
+    transition: all 0.3s;
+  }
+  .driver-badge.online { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+  .driver-badge.offline { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+  .driver-badge.waiting { background: rgba(245,197,24,0.1); color: var(--accent); border: 1px solid rgba(245,197,24,0.2); }
+  .driver-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .driver-badge.online .dot { animation: pulse 1.5s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* ===== TABS ===== */
   .tabs {
     display: flex;
-    background: var(--card);
+    background: var(--surface);
     border-bottom: 1px solid var(--border);
-    position: sticky; top: 65px; z-index: 99;
+    position: sticky; top: 61px; z-index: 299;
+    padding: 0 4px;
   }
   .tab {
     flex: 1;
-    padding: 13px;
+    padding: 12px 8px;
     text-align: center;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--sub);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text3);
     cursor: pointer;
-    border-bottom: 3px solid transparent;
+    border-bottom: 2px solid transparent;
     transition: all 0.2s;
     user-select: none;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    letter-spacing: 0.2px;
   }
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab svg { width: 15px; height: 15px; }
 
-  /* PAGES */
-  .page { display: none; padding: 16px; padding-bottom: 100px; }
-  .page.active { display: block; }
+  /* ===== PAGES ===== */
+  .page { display: none; padding-bottom: 110px; }
+  .page.active { display: block; animation: fadeUp 0.22s ease; }
 
-  /* SECTION LABEL */
-  .section-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--sub);
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    margin: 20px 0 8px;
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-  .section-label:first-child { margin-top: 4px; }
 
-  /* INPUT GROUP */
-  .input-group { margin-bottom: 12px; }
-  .input-label {
-    font-size: 13px;
-    color: var(--sub);
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  /* ===== MAP ===== */
+  .map-container {
+    height: 220px;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+  }
+  #map { height: 100%; width: 100%; }
+
+  .map-overlay {
+    position: absolute;
+    bottom: 10px; right: 10px;
+    z-index: 500;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .map-btn {
+    width: 36px; height: 36px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    transition: background 0.15s;
+  }
+  .map-btn:active { background: var(--surface2); }
+
+  .map-info-bar {
+    position: absolute;
+    top: 10px; left: 10px; right: 10px;
+    z-index: 500;
+    background: rgba(13,13,15,0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .map-info-bar.hidden { display: none; }
+  .map-dist { color: var(--accent); }
+  .map-time { color: var(--green); }
+  .map-price { color: var(--text); }
+
+  .route-mode-hint {
+    position: absolute;
+    bottom: 50%;
+    left: 50%; transform: translateX(-50%);
+    z-index: 500;
+    background: rgba(13,13,15,0.9);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: var(--text2);
+    pointer-events: none;
+    white-space: nowrap;
+    display: none;
+  }
+  .route-mode-hint.show { display: block; }
+
+  /* ===== FORM AREA ===== */
+  .form-area { padding: 14px 14px 0; }
+
+  /* ===== SECTION ===== */
+  .section-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 16px 0 8px;
+  }
+  .section-label:first-child { margin-top: 2px; }
+
+  /* ===== INPUT ===== */
+  .input-wrap { position: relative; margin-bottom: 8px; }
+  .input-icon {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    font-size: 14px; z-index: 2; pointer-events: none;
+    width: 18px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .route-dot-from {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.2);
+  }
+  .route-dot-to {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 3px rgba(34,197,94,0.2);
   }
   .input-field {
     width: 100%;
-    background: var(--card);
+    background: var(--surface2);
     border: 1.5px solid var(--border);
-    border-radius: var(--radius);
-    padding: 13px 16px;
+    border-radius: var(--radius-sm);
+    padding: 13px 42px 13px 40px;
     color: var(--text);
-    font-size: 15px;
+    font-size: 14px;
+    font-family: 'Manrope', system-ui, sans-serif;
+    font-weight: 500;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, background 0.2s;
     -webkit-appearance: none;
   }
-  .input-field:focus { border-color: var(--accent); }
-  .input-field::placeholder { color: #444; }
-  textarea.input-field { resize: none; height: 72px; font-family: inherit; }
-
-  /* DISTANCE ROW */
-  .dist-row { display: flex; gap: 10px; align-items: flex-end; }
-  .dist-row .input-group { flex: 1; margin-bottom: 0; }
-  .dist-hint {
-    background: var(--card2);
-    border-radius: var(--radius);
-    padding: 12px 14px;
-    font-size: 13px;
-    color: var(--sub);
-    white-space: nowrap;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    min-width: 100px;
+  .input-field:focus {
+    border-color: var(--accent);
+    background: var(--surface3);
   }
-  .dist-hint span { color: var(--accent); font-weight: 700; }
+  .input-field::placeholder { color: var(--text3); }
+  textarea.input-field {
+    resize: none;
+    height: 68px;
+    padding-top: 13px;
+    font-family: 'Manrope', system-ui, sans-serif;
+  }
+  .input-clear {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    font-size: 16px; color: var(--text3);
+    cursor: pointer; z-index: 2;
+    width: 20px; height: 20px;
+    display: none; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: var(--surface3);
+    font-size: 11px; font-weight: 700;
+  }
+  .input-clear.show { display: flex; }
 
-  /* PRICE CARD */
+  /* Autocomplete */
+  .autocomplete-box {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    z-index: 600;
+    overflow: hidden;
+    display: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .autocomplete-box.show { display: block; }
+  .autocomplete-item {
+    padding: 11px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    transition: background 0.1s;
+  }
+  .autocomplete-item:last-child { border-bottom: none; }
+  .autocomplete-item:active { background: var(--surface3); }
+  .autocomplete-item .ac-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* Connector line between inputs */
+  .route-connector {
+    display: flex; align-items: stretch; gap: 0;
+    flex-direction: column;
+    position: relative;
+    padding-left: 22px;
+  }
+  .route-connector::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 26px;
+    bottom: 26px;
+    width: 1.5px;
+    background: linear-gradient(to bottom, var(--red), var(--green));
+    opacity: 0.5;
+  }
+
+  /* ===== TYPE SELECTOR ===== */
+  .type-row { display: flex; gap: 8px; }
+  .type-btn {
+    flex: 1;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .type-btn.active {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+  .type-btn .t-icon { font-size: 20px; margin-bottom: 4px; }
+  .type-btn .t-name { font-size: 12px; font-weight: 700; color: var(--text2); }
+  .type-btn.active .t-name { color: var(--accent); }
+  .type-btn .t-price { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .type-btn.active .t-price { color: var(--text2); }
+
+  /* ===== PRICE CARD ===== */
   .price-card {
-    background: linear-gradient(135deg, #1e1a00 0%, #1a1a1a 100%);
-    border: 1.5px solid #3a3000;
-    border-radius: var(--radius);
-    padding: 16px;
-    margin: 16px 0;
+    background: var(--surface2);
+    border: 1.5px solid var(--accent-border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin-top: 10px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
   }
-  .price-label { font-size: 13px; color: var(--sub); }
-  .price-value { font-size: 26px; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; }
-  .price-info { font-size: 11px; color: #666; margin-top: 2px; }
-  .price-eta { text-align: right; }
-  .eta-value { font-size: 18px; font-weight: 700; color: var(--green); }
+  .price-card.hidden { display: none; }
+  .price-main { }
+  .price-label { font-size: 11px; color: var(--text2); font-weight: 600; }
+  .price-value { font-size: 28px; font-weight: 800; color: var(--accent); letter-spacing: -1px; line-height: 1; margin-top: 3px; }
+  .price-detail { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .price-aside { text-align: right; }
+  .price-eta-val { font-size: 20px; font-weight: 800; color: var(--green); line-height: 1; }
+  .price-aside .price-label { display: block; margin-bottom: 3px; }
 
-  /* TYPE SELECTOR */
-  .type-selector { display: flex; gap: 10px; margin-bottom: 16px; }
-  .type-btn {
-    flex: 1;
-    background: var(--card);
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 10px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
+  /* ===== WAITING BANNER ===== */
+  .waiting-banner {
+    background: rgba(245,197,24,0.07);
+    border: 1px solid rgba(245,197,24,0.2);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    display: none;
   }
-  .type-btn.active { border-color: var(--accent); background: #1e1a00; }
-  .type-btn .type-icon { font-size: 24px; margin-bottom: 4px; }
-  .type-btn .type-name { font-size: 13px; font-weight: 600; color: var(--sub); }
-  .type-btn.active .type-name { color: var(--accent); }
-  .type-btn .type-price { font-size: 11px; color: #555; margin-top: 2px; }
-  .type-btn.active .type-price { color: #888; }
+  .waiting-banner.show { display: flex; }
+  .waiting-spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(245,197,24,0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* BOTTOM BUTTON */
+  /* ===== ALERT ===== */
+  .alert {
+    background: var(--red-dim);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #ff9999;
+    font-weight: 500;
+    margin-bottom: 10px;
+    display: none;
+  }
+  .alert.show { display: block; animation: shake 0.3s; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  /* ===== BOTTOM BTN ===== */
   .bottom-bar {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-    background: linear-gradient(to top, var(--bg) 60%, transparent);
-    z-index: 200;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 65%, transparent);
+    z-index: 400;
   }
   .submit-btn {
     width: 100%;
@@ -167,222 +395,269 @@
     color: #000;
     border: none;
     border-radius: 14px;
-    padding: 16px;
-    font-size: 16px;
-    font-weight: 700;
+    padding: 15px;
+    font-size: 15px;
+    font-weight: 800;
     cursor: pointer;
+    font-family: 'Manrope', system-ui;
     transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
     letter-spacing: -0.2px;
+    box-shadow: 0 4px 20px rgba(245,197,24,0.25);
   }
-  .submit-btn:active { transform: scale(0.98); background: var(--accent2); }
-  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .submit-btn:active { transform: scale(0.98); background: #e6b800; box-shadow: none; }
+  .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
 
-  /* INFO ROWS */
-  .info-card {
-    background: var(--card);
-    border-radius: var(--radius);
-    overflow: hidden;
+  /* ===== TARIFF PAGE ===== */
+  .tariff-page { padding: 14px; }
+  .tariff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tariff-item {
+    background: var(--surface2);
     border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 12px;
+  }
+  .tariff-item .t-icon { font-size: 22px; margin-bottom: 6px; }
+  .tariff-item .t-name { font-size: 12px; color: var(--text2); font-weight: 600; }
+  .tariff-item .t-val { font-size: 18px; font-weight: 800; color: var(--accent); margin-top: 4px; }
+  .tariff-item .t-desc { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+  .calc-result {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    display: none;
+    margin-top: 10px;
+  }
+  .calc-result.show { display: block; }
+  .calc-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .calc-row:last-child { border-bottom: none; }
+  .calc-row .r-label { color: var(--text2); font-weight: 500; }
+  .calc-row .r-val { font-weight: 800; color: var(--accent); }
+
+  /* ===== INFO PAGE ===== */
+  .info-page { padding: 14px; }
+  .info-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
   }
   .info-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 14px;
     border-bottom: 1px solid var(--border);
   }
   .info-row:last-child { border-bottom: none; }
-  .info-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+  .info-icon { font-size: 17px; width: 22px; text-align: center; flex-shrink: 0; }
   .info-content { flex: 1; }
-  .info-title { font-size: 13px; color: var(--sub); }
-  .info-value { font-size: 15px; font-weight: 600; margin-top: 1px; }
+  .info-title { font-size: 11px; color: var(--text2); font-weight: 600; }
+  .info-value { font-size: 14px; font-weight: 700; margin-top: 2px; }
 
-  /* TARIFF CARD */
-  .tariff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .tariff-item {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px;
-  }
-  .tariff-item-icon { font-size: 22px; margin-bottom: 6px; }
-  .tariff-item-name { font-size: 13px; color: var(--sub); font-weight: 600; }
-  .tariff-item-price { font-size: 15px; font-weight: 700; color: var(--accent); margin-top: 4px; }
-  .tariff-item-detail { font-size: 11px; color: #555; margin-top: 2px; }
-
-  /* STATUS BADGE */
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 10px;
-    border-radius: 100px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .badge.online { background: #0f2e1a; color: var(--green); border: 1px solid #1a4a2a; }
-  .badge.offline { background: #2e0f0f; color: var(--red); border: 1px solid #4a1a1a; }
-
-  /* QUICK ADDRESSES */
-  .quick-addresses { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-  .quick-addr-btn {
-    background: var(--card2);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 6px 12px;
-    font-size: 12px;
-    color: var(--sub);
-    cursor: pointer;
-    transition: all 0.15s;
-    white-space: nowrap;
-  }
-  .quick-addr-btn:active { background: #2a2a2a; color: var(--text); }
-
-  /* ANIMATION */
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-  .page.active { animation: fadeIn 0.2s ease; }
-
-  /* DIVIDER */
-  .divider { height: 1px; background: var(--border); margin: 20px 0; }
-
-  /* ALERT */
-  .alert {
-    background: #1a0f0f;
-    border: 1px solid #3a1a1a;
-    border-radius: var(--radius);
+  .step-list { display: flex; flex-direction: column; gap: 0; }
+  .step-item {
+    display: flex; align-items: flex-start; gap: 12px;
     padding: 12px 14px;
-    font-size: 13px;
-    color: #ff9999;
-    display: none;
-    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
   }
-  .alert.show { display: block; }
+  .step-item:last-child { border-bottom: none; }
+  .step-num {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .step-text { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
+  .step-sub { font-size: 11px; color: var(--text2); margin-top: 3px; }
+
+  /* Leaflet custom styles */
+  .leaflet-container { background: #1a1a24 !important; }
+  .leaflet-tile { filter: brightness(0.85) saturate(0.7); }
+  .custom-marker-from, .custom-marker-to {
+    display: flex; align-items: center; justify-content: center;
+  }
 </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <div class="header">
-  <div class="header-icon">🚕</div>
-  <div>
-    <div class="header-title">ЕнакиевоТакси</div>
-    <div class="header-sub" id="driverStatus">Загружаем статус...</div>
+  <div class="header-left">
+    <div class="header-logo">🚕</div>
+    <div>
+      <div class="header-title">ЕнакиевоТакси</div>
+      <div class="header-sub">Г. Енакиево, ДНР</div>
+    </div>
+  </div>
+  <div class="driver-badge waiting" id="driverBadge">
+    <div class="dot"></div>
+    <span id="driverBadgeText">Загрузка...</span>
   </div>
 </div>
 
+<!-- TABS -->
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('order')">🚕 Заказ</div>
-  <div class="tab" onclick="switchTab('tariff')">🪙 Тарифы</div>
-  <div class="tab" onclick="switchTab('info')">ℹ️ Инфо</div>
+  <div class="tab active" onclick="switchTab('order')" id="tab-order">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    ЗАКАЗ
+  </div>
+  <div class="tab" onclick="switchTab('tariff')" id="tab-tariff">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="18" rx="3"/><path d="M8 8h8M8 12h5"/></svg>
+    ТАРИФЫ
+  </div>
+  <div class="tab" onclick="switchTab('info')" id="tab-info">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    ИНФО
+  </div>
 </div>
 
-<!-- PAGE: ORDER -->
+<!-- ============ PAGE: ORDER ============ -->
 <div class="page active" id="page-order">
 
-  <div class="section-label">Тип заказа</div>
-  <div class="type-selector">
-    <div class="type-btn active" id="btn-taxi" onclick="selectType('taxi')">
-      <div class="type-icon">🚕</div>
-      <div class="type-name">Такси</div>
-      <div class="type-price">от 170 ₽</div>
+  <!-- MAP -->
+  <div class="map-container">
+    <div id="map"></div>
+    <div class="map-info-bar hidden" id="mapInfoBar">
+      <span class="map-dist" id="mapDist">— км</span>
+      <span class="map-time" id="mapTime">— мин</span>
+      <span class="map-price" id="mapPrice">— ₽</span>
     </div>
-    <div class="type-btn" id="btn-delivery" onclick="selectType('delivery')">
-      <div class="type-icon">📦</div>
-      <div class="type-name">Доставка</div>
-      <div class="type-price">от 200 ₽</div>
-    </div>
-  </div>
-
-  <div class="alert" id="formAlert">⚠️ Пожалуйста, заполните все обязательные поля.</div>
-
-  <div class="section-label">📍 Маршрут</div>
-
-  <div class="input-group">
-    <div class="input-label">🔴 Откуда забрать</div>
-    <input class="input-field" id="fromAddr" type="text" placeholder="Улица, дом..." autocomplete="off" oninput="calcPrice()">
-    <div class="quick-addresses" id="quickFrom">
-      <div class="quick-addr-btn" onclick="setFrom('ул. Ленина, 1')">ул. Ленина, 1</div>
-      <div class="quick-addr-btn" onclick="setFrom('Центр города')">Центр</div>
-      <div class="quick-addr-btn" onclick="setFrom('Рынок')">Рынок</div>
-      <div class="quick-addr-btn" onclick="setFrom('Вокзал')">Вокзал</div>
+    <div class="route-mode-hint" id="routeHint">Нажмите на карту — выберите точку</div>
+    <div class="map-overlay">
+      <div class="map-btn" onclick="locateUser()" title="Моё место">📍</div>
+      <div class="map-btn" onclick="clearRoute()" title="Сбросить маршрут">🗑</div>
     </div>
   </div>
 
-  <div class="input-group">
-    <div class="input-label">🟢 Куда ехать</div>
-    <input class="input-field" id="toAddr" type="text" placeholder="Улица, дом..." autocomplete="off" oninput="calcPrice()">
-    <div class="quick-addresses" id="quickTo">
-      <div class="quick-addr-btn" onclick="setTo('Больница')">Больница</div>
-      <div class="quick-addr-btn" onclick="setTo('Рынок')">Рынок</div>
-      <div class="quick-addr-btn" onclick="setTo('Центр')">Центр</div>
-      <div class="quick-addr-btn" onclick="setTo('Вокзал')">Вокзал</div>
-    </div>
-  </div>
+  <div class="form-area">
 
-  <div class="section-label">↔️ Расстояние</div>
-  <div class="dist-row">
-    <div class="input-group">
-      <input class="input-field" id="distKm" type="number" placeholder="напр. 3.5" min="0.1" max="100" step="0.5" oninput="calcPrice()">
+    <!-- TYPE -->
+    <div class="section-label">Тип заказа</div>
+    <div class="type-row">
+      <div class="type-btn active" id="btn-taxi" onclick="selectType('taxi')">
+        <div class="t-icon">🚕</div>
+        <div class="t-name">Такси</div>
+        <div class="t-price">от 170 ₽</div>
+      </div>
+      <div class="type-btn" id="btn-delivery" onclick="selectType('delivery')">
+        <div class="t-icon">📦</div>
+        <div class="t-name">Доставка</div>
+        <div class="t-price">от 200 ₽</div>
+      </div>
     </div>
-    <div class="dist-hint" id="distHint">— км</div>
-  </div>
 
-  <div class="price-card" id="priceCard">
-    <div>
-      <div class="price-label">Стоимость поездки</div>
-      <div class="price-value" id="priceVal">—</div>
-      <div class="price-info" id="priceInfo">Введите расстояние</div>
+    <!-- ROUTE -->
+    <div class="section-label">Маршрут</div>
+    <div class="alert" id="formAlert"></div>
+
+    <div class="route-connector">
+      <!-- FROM -->
+      <div class="input-wrap" style="margin-bottom:8px;">
+        <div class="input-icon"><div class="route-dot-from"></div></div>
+        <input class="input-field" id="fromAddr" type="text" placeholder="Откуда забрать..." autocomplete="off">
+        <div class="input-clear" id="fromClear" onclick="clearInput('from')">✕</div>
+        <div class="autocomplete-box" id="acFrom"></div>
+      </div>
+      <!-- TO -->
+      <div class="input-wrap" style="margin-bottom:0;">
+        <div class="input-icon"><div class="route-dot-to"></div></div>
+        <input class="input-field" id="toAddr" type="text" placeholder="Куда ехать..." autocomplete="off">
+        <div class="input-clear" id="toClear" onclick="clearInput('to')">✕</div>
+        <div class="autocomplete-box" id="acTo"></div>
+      </div>
     </div>
-    <div class="price-eta">
-      <div class="price-label">Время в пути</div>
-      <div class="eta-value" id="etaVal">—</div>
-      <div class="price-info">мин</div>
+
+    <!-- PRICE -->
+    <div class="price-card hidden" id="priceCard">
+      <div class="price-main">
+        <div class="price-label">Стоимость</div>
+        <div class="price-value" id="priceVal">—</div>
+        <div class="price-detail" id="priceDetail">—</div>
+      </div>
+      <div class="price-aside">
+        <div class="price-label">В пути</div>
+        <div class="price-eta-val" id="etaVal">—</div>
+        <div class="price-label" style="margin-top:2px;">мин</div>
+      </div>
     </div>
-  </div>
 
-  <div class="section-label">✍️ Комментарий <span style="color:#555;font-size:10px;font-weight:400;text-transform:none;">(необязательно)</span></div>
-  <div class="input-group">
-    <textarea class="input-field" id="comment" placeholder="Особые пожелания, уточнения..."></textarea>
-  </div>
+    <!-- WAITING BANNER -->
+    <div class="waiting-banner" id="waitingBanner">
+      <div class="waiting-spinner"></div>
+      <span>Ожидаем водителей онлайн — принимаем заявки заранее!</span>
+    </div>
 
+    <!-- COMMENT -->
+    <div class="section-label" style="margin-top:14px;">Комментарий <span style="color:var(--text3);font-size:10px;font-weight:400;text-transform:none;">(необязательно)</span></div>
+    <div class="input-wrap">
+      <textarea class="input-field" id="comment" placeholder="Особые пожелания, уточнения..."></textarea>
+    </div>
+
+  </div>
 </div>
 
-<!-- PAGE: TARIFF -->
+<!-- ============ PAGE: TARIFF ============ -->
 <div class="page" id="page-tariff">
-
+<div class="tariff-page">
   <div class="section-label">Тарифы</div>
   <div class="tariff-grid">
     <div class="tariff-item">
-      <div class="tariff-item-icon">🚕</div>
-      <div class="tariff-item-name">Такси</div>
-      <div class="tariff-item-price">170 ₽</div>
-      <div class="tariff-item-detail">посадка</div>
+      <div class="t-icon">🚕</div>
+      <div class="t-name">Посадка (такси)</div>
+      <div class="t-val">170 ₽</div>
+      <div class="t-desc">начальная стоимость</div>
     </div>
     <div class="tariff-item">
-      <div class="tariff-item-icon">🛣️</div>
-      <div class="tariff-item-name">За км (такси)</div>
-      <div class="tariff-item-price">40 ₽/км</div>
-      <div class="tariff-item-detail">сверх посадки</div>
+      <div class="t-icon">🛣️</div>
+      <div class="t-name">Такси / км</div>
+      <div class="t-val">40 ₽</div>
+      <div class="t-desc">за каждый км</div>
     </div>
     <div class="tariff-item">
-      <div class="tariff-item-icon">📦</div>
-      <div class="tariff-item-name">Доставка</div>
-      <div class="tariff-item-price">200 ₽</div>
-      <div class="tariff-item-detail">посадка</div>
+      <div class="t-icon">📦</div>
+      <div class="t-name">Посадка (доставка)</div>
+      <div class="t-val">200 ₽</div>
+      <div class="t-desc">начальная стоимость</div>
     </div>
     <div class="tariff-item">
-      <div class="tariff-item-icon">🛣️</div>
-      <div class="tariff-item-name">За км (доставка)</div>
-      <div class="tariff-item-price">50 ₽/км</div>
-      <div class="tariff-item-detail">сверх посадки</div>
+      <div class="t-icon">🛣️</div>
+      <div class="t-name">Доставка / км</div>
+      <div class="t-val">50 ₽</div>
+      <div class="t-desc">за каждый км</div>
     </div>
   </div>
 
   <div class="divider"></div>
-  <div class="section-label">Примеры поездок</div>
+  <div class="section-label">Калькулятор</div>
+  <div class="input-wrap">
+    <div class="input-icon" style="font-size:14px;">📏</div>
+    <input class="input-field" id="calcDist" type="number" placeholder="Расстояние в км..." min="0" step="0.5" oninput="updateCalc()">
+  </div>
+  <div class="calc-result" id="calcResult">
+    <div class="calc-row">
+      <span class="r-label">🚕 Такси</span>
+      <span class="r-val" id="calcTaxi">—</span>
+    </div>
+    <div class="calc-row">
+      <span class="r-label">📦 Доставка</span>
+      <span class="r-val" id="calcDelivery">—</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">Примеры</div>
   <div class="info-card">
     <div class="info-row">
       <div class="info-icon">🚕</div>
@@ -413,34 +688,12 @@
       </div>
     </div>
   </div>
-
-  <div class="divider"></div>
-  <div class="section-label">Калькулятор стоимости</div>
-  <div class="input-group">
-    <div class="input-label">Введите расстояние (км)</div>
-    <input class="input-field" id="calcDist" type="number" placeholder="Например: 5" min="0" step="0.5" oninput="updateCalc()">
-  </div>
-  <div class="info-card" id="calcResult" style="display:none;">
-    <div class="info-row">
-      <div class="info-icon">🚕</div>
-      <div class="info-content">
-        <div class="info-title">Такси</div>
-        <div class="info-value" id="calcTaxi">—</div>
-      </div>
-    </div>
-    <div class="info-row">
-      <div class="info-icon">📦</div>
-      <div class="info-content">
-        <div class="info-title">Доставка</div>
-        <div class="info-value" id="calcDelivery">—</div>
-      </div>
-    </div>
-  </div>
-
+</div>
 </div>
 
-<!-- PAGE: INFO -->
+<!-- ============ PAGE: INFO ============ -->
 <div class="page" id="page-info">
+<div class="info-page">
 
   <div class="section-label">О сервисе</div>
   <div class="info-card">
@@ -462,196 +715,430 @@
       <div class="info-icon">🚗</div>
       <div class="info-content">
         <div class="info-title">Водителей онлайн</div>
-        <div class="info-value" id="infoDrivers">Загружаем...</div>
+        <div class="info-value" id="infoDriversCount">—</div>
       </div>
     </div>
   </div>
 
   <div class="divider"></div>
   <div class="section-label">Как заказать?</div>
-  <div class="info-card">
-    <div class="info-row">
-      <div class="info-icon">1️⃣</div>
-      <div class="info-content">
-        <div class="info-title">Шаг 1</div>
-        <div class="info-value">Выберите тип: Такси или Доставка</div>
+  <div class="info-card step-list">
+    <div class="step-item">
+      <div class="step-num">1</div>
+      <div><div class="step-text">Выберите тип: Такси или Доставка</div></div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-text">Введите адреса или отметьте на карте</div>
+        <div class="step-sub">Расстояние рассчитается автоматически</div>
       </div>
     </div>
-    <div class="info-row">
-      <div class="info-icon">2️⃣</div>
-      <div class="info-content">
-        <div class="info-title">Шаг 2</div>
-        <div class="info-value">Введите откуда и куда ехать</div>
-      </div>
+    <div class="step-item">
+      <div class="step-num">3</div>
+      <div><div class="step-text">Нажмите «Оформить заказ»</div></div>
     </div>
-    <div class="info-row">
-      <div class="info-icon">3️⃣</div>
-      <div class="info-content">
-        <div class="info-title">Шаг 3</div>
-        <div class="info-value">Укажите примерное расстояние</div>
-      </div>
-    </div>
-    <div class="info-row">
-      <div class="info-icon">4️⃣</div>
-      <div class="info-content">
-        <div class="info-title">Шаг 4</div>
-        <div class="info-value">Нажмите "Оформить заказ"</div>
-      </div>
-    </div>
-    <div class="info-row">
-      <div class="info-icon">5️⃣</div>
-      <div class="info-content">
-        <div class="info-title">Шаг 5</div>
-        <div class="info-value">Подтвердите в чате бота — и ждите водителя!</div>
-      </div>
+    <div class="step-item">
+      <div class="step-num">4</div>
+      <div><div class="step-text">Подтвердите в чате бота и ждите водителя!</div></div>
     </div>
   </div>
 
 </div>
+</div>
 
-<!-- BOTTOM BUTTON -->
+<!-- BOTTOM -->
 <div class="bottom-bar" id="bottomBar">
   <button class="submit-btn" id="submitBtn" onclick="submitOrder()">
-    <span>🚕</span>
+    <span id="submitIcon">🚕</span>
     <span id="submitText">Оформить заказ</span>
   </button>
 </div>
 
 <script>
-  const tg = window.Telegram.WebApp;
-  tg.expand();
-  tg.ready();
+// ====== TELEGRAM INIT ======
+const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : { expand:()=>{}, ready:()=>{}, sendData:()=>{}, colorScheme:'dark' };
+tg.expand();
+tg.ready();
 
-  // Apply Telegram theme
-  if (tg.colorScheme === 'light') {
-    document.documentElement.style.setProperty('--bg', '#f5f5f5');
-    document.documentElement.style.setProperty('--card', '#ffffff');
-    document.documentElement.style.setProperty('--card2', '#f0f0f0');
-    document.documentElement.style.setProperty('--text', '#111');
-    document.documentElement.style.setProperty('--sub', '#666');
-    document.documentElement.style.setProperty('--border', '#e0e0e0');
+// Dark/light theme
+if (tg.colorScheme === 'light') {
+  const r = document.documentElement.style;
+  r.setProperty('--bg', '#f2f2f7');
+  r.setProperty('--surface', '#ffffff');
+  r.setProperty('--surface2', '#f8f8fc');
+  r.setProperty('--surface3', '#ededf2');
+  r.setProperty('--text', '#111118');
+  r.setProperty('--text2', '#666672');
+  r.setProperty('--text3', '#a0a0b0');
+  r.setProperty('--border', 'rgba(0,0,0,0.08)');
+}
+
+// ====== MAP INIT ======
+const ENAKIEVO = [48.2378, 38.2003]; // Енакиево координаты
+
+const map = L.map('map', {
+  center: ENAKIEVO,
+  zoom: 13,
+  zoomControl: false,
+  attributionControl: false
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19
+}).addTo(map);
+
+// Custom markers
+function makeIcon(color) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width:16px;height:16px;border-radius:50%;
+      background:${color};
+      border:3px solid rgba(255,255,255,0.9);
+      box-shadow:0 2px 8px rgba(0,0,0,0.5);
+    "></div>`,
+    iconSize: [16,16], iconAnchor: [8,8]
+  });
+}
+
+let markerFrom = null, markerTo = null, routeLine = null;
+let calculatedDistance = 0, calculatedPrice = 0, calculatedEta = 0;
+let orderType = 'taxi';
+let pickMode = null; // 'from' | 'to' | null
+let driverCount = 0;
+
+// Map click
+map.on('click', function(e) {
+  if (!pickMode) {
+    // Auto assign: if no from -> set from, else set to
+    if (!markerFrom) pickMode = 'from';
+    else if (!markerTo) pickMode = 'to';
+    else pickMode = 'to';
   }
+  const { lat, lng } = e.latlng;
+  reverseGeocode(lat, lng, pickMode);
+  pickMode = null;
+  document.getElementById('routeHint').classList.remove('show');
+});
 
-  let orderType = 'taxi';
-
-  function selectType(type) {
-    orderType = type;
-    document.getElementById('btn-taxi').classList.toggle('active', type === 'taxi');
-    document.getElementById('btn-delivery').classList.toggle('active', type === 'delivery');
-    document.getElementById('submitBtn').querySelector('span:first-child').textContent = type === 'taxi' ? '🚕' : '📦';
-    calcPrice();
-  }
-
-  function setFrom(addr) {
-    document.getElementById('fromAddr').value = addr;
-    calcPrice();
-  }
-
-  function setTo(addr) {
-    document.getElementById('toAddr').value = addr;
-    calcPrice();
-  }
-
-  function calcPrice() {
-    const dist = parseFloat(document.getElementById('distKm').value);
-    const distHint = document.getElementById('distHint');
-    const priceVal = document.getElementById('priceVal');
-    const priceInfo = document.getElementById('priceInfo');
-    const etaVal = document.getElementById('etaVal');
-
-    if (isNaN(dist) || dist <= 0) {
-      distHint.innerHTML = '— км';
-      priceVal.textContent = '—';
-      priceInfo.textContent = 'Введите расстояние';
-      etaVal.textContent = '—';
-      return;
-    }
-
-    distHint.innerHTML = `<span>${dist}</span> км`;
-
-    let base, perKm;
-    if (orderType === 'delivery') {
-      base = 200; perKm = 50;
-    } else {
-      base = 170; perKm = 40;
-    }
-    const price = base + dist * perKm;
-    const eta = Math.max(3, Math.round(dist / 30 * 60));
-
-    priceVal.textContent = Math.round(price) + ' ₽';
-    priceInfo.textContent = `посадка ${base}₽ + ${dist}км × ${perKm}₽`;
-    etaVal.textContent = `~${eta}`;
-  }
-
-  function updateCalc() {
-    const dist = parseFloat(document.getElementById('calcDist').value);
-    const result = document.getElementById('calcResult');
-    if (isNaN(dist) || dist <= 0) {
-      result.style.display = 'none';
-      return;
-    }
-    result.style.display = 'block';
-    document.getElementById('calcTaxi').textContent = Math.round(170 + dist * 40) + ' ₽';
-    document.getElementById('calcDelivery').textContent = Math.round(200 + dist * 50) + ' ₽';
-  }
-
-  function switchTab(name) {
-    document.querySelectorAll('.tab').forEach((t, i) => {
-      t.classList.toggle('active', ['order','tariff','info'][i] === name);
+function reverseGeocode(lat, lng, mode) {
+  const field = mode === 'from' ? 'fromAddr' : 'toAddr';
+  document.getElementById(field).value = 'Определяем адрес...';
+  
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ru`)
+    .then(r => r.json())
+    .then(d => {
+      const addr = d.address;
+      let label = '';
+      if (addr.road) label = addr.road;
+      if (addr.house_number) label += ', ' + addr.house_number;
+      if (!label) label = d.display_name.split(',').slice(0,2).join(', ');
+      document.getElementById(field).value = label;
+      updateClear(mode === 'from' ? 'from' : 'to');
+      setMarker(lat, lng, mode);
+    })
+    .catch(() => {
+      document.getElementById(field).value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      setMarker(lat, lng, mode);
     });
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-' + name).classList.add('active');
-    document.getElementById('bottomBar').style.display = name === 'order' ? 'block' : 'none';
+}
+
+function setMarker(lat, lng, mode) {
+  if (mode === 'from') {
+    if (markerFrom) map.removeLayer(markerFrom);
+    markerFrom = L.marker([lat, lng], { icon: makeIcon('#ef4444') }).addTo(map);
+  } else {
+    if (markerTo) map.removeLayer(markerTo);
+    markerTo = L.marker([lat, lng], { icon: makeIcon('#22c55e') }).addTo(map);
+  }
+  if (markerFrom && markerTo) buildRoute();
+  else if (markerFrom || markerTo) {
+    const m = markerFrom || markerTo;
+    map.setView(m.getLatLng(), 15, { animate: true });
+  }
+}
+
+function buildRoute() {
+  const fromLL = markerFrom.getLatLng();
+  const toLL = markerTo.getLatLng();
+
+  // Draw straight line while fetching
+  if (routeLine) map.removeLayer(routeLine);
+  routeLine = L.polyline([fromLL, toLL], {
+    color: '#f5c518', weight: 3, dashArray: '6 6', opacity: 0.7
+  }).addTo(map);
+  map.fitBounds(L.latLngBounds([fromLL, toLL]), { padding: [40, 40], animate: true });
+
+  // Use OSRM for routing
+  const url = `https://router.project-osrm.org/route/v1/driving/${fromLL.lng},${fromLL.lat};${toLL.lng},${toLL.lat}?overview=full&geometries=geojson`;
+  fetch(url)
+    .then(r => r.json())
+    .then(d => {
+      if (d.routes && d.routes.length > 0) {
+        const route = d.routes[0];
+        const dist = route.distance / 1000; // km
+        const dur = Math.round(route.duration / 60); // min
+        
+        // Draw actual route
+        if (routeLine) map.removeLayer(routeLine);
+        const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+        routeLine = L.polyline(coords, {
+          color: '#f5c518', weight: 3.5, opacity: 0.85
+        }).addTo(map);
+        map.fitBounds(routeLine.getBounds(), { padding: [40, 40], animate: true });
+
+        updatePriceFromRoute(dist, dur);
+      }
+    })
+    .catch(() => {
+      // Fallback to Haversine
+      const dist = haversine(fromLL.lat, fromLL.lng, toLL.lat, toLL.lng);
+      const dur = Math.max(3, Math.round(dist / 30 * 60));
+      updatePriceFromRoute(dist, dur);
+    });
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function updatePriceFromRoute(dist, eta) {
+  calculatedDistance = dist;
+  calculatedEta = eta;
+  const base = orderType === 'delivery' ? 200 : 170;
+  const perKm = orderType === 'delivery' ? 50 : 40;
+  calculatedPrice = Math.round(base + dist * perKm);
+
+  document.getElementById('priceVal').textContent = calculatedPrice + ' ₽';
+  document.getElementById('priceDetail').textContent = `посадка ${base}₽ + ${dist.toFixed(1)}км × ${perKm}₽`;
+  document.getElementById('etaVal').textContent = eta;
+  document.getElementById('priceCard').classList.remove('hidden');
+
+  document.getElementById('mapInfoBar').classList.remove('hidden');
+  document.getElementById('mapDist').textContent = dist.toFixed(1) + ' км';
+  document.getElementById('mapTime').textContent = eta + ' мин';
+  document.getElementById('mapPrice').textContent = calculatedPrice + ' ₽';
+}
+
+function clearRoute() {
+  if (markerFrom) { map.removeLayer(markerFrom); markerFrom = null; }
+  if (markerTo) { map.removeLayer(markerTo); markerTo = null; }
+  if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+  document.getElementById('fromAddr').value = '';
+  document.getElementById('toAddr').value = '';
+  document.getElementById('fromClear').classList.remove('show');
+  document.getElementById('toClear').classList.remove('show');
+  document.getElementById('priceCard').classList.add('hidden');
+  document.getElementById('mapInfoBar').classList.add('hidden');
+  calculatedDistance = 0; calculatedPrice = 0; calculatedEta = 0;
+  map.setView(ENAKIEVO, 13, { animate: true });
+}
+
+function locateUser() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    reverseGeocode(lat, lng, 'from');
+    map.setView([lat, lng], 15, { animate: true });
+  }, () => {});
+}
+
+// ====== GEOCODING / AUTOCOMPLETE ======
+let acTimeout = null;
+
+function setupAutocomplete(inputId, acId, mode) {
+  const inp = document.getElementById(inputId);
+  const ac = document.getElementById(acId);
+
+  inp.addEventListener('input', () => {
+    updateClear(mode);
+    clearTimeout(acTimeout);
+    const q = inp.value.trim();
+    if (q.length < 2) { ac.classList.remove('show'); return; }
+    acTimeout = setTimeout(() => geocodeSearch(q, ac, mode), 400);
+  });
+
+  inp.addEventListener('focus', () => {
+    if (inp.value.trim().length >= 2) ac.classList.add('show');
+  });
+
+  document.addEventListener('click', e => {
+    if (!inp.contains(e.target) && !ac.contains(e.target)) ac.classList.remove('show');
+  });
+}
+
+function geocodeSearch(query, acBox, mode) {
+  const cityQuery = query.includes('Енакиево') ? query : query + ', Енакиево';
+  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityQuery)}&limit=5&accept-language=ru&countrycodes=ru,ua`)
+    .then(r => r.json())
+    .then(results => {
+      acBox.innerHTML = '';
+      if (!results.length) { acBox.classList.remove('show'); return; }
+      results.forEach(r => {
+        const parts = r.display_name.split(', ');
+        const main = parts[0] + (parts[1] ? ', ' + parts[1] : '');
+        const sub = parts.slice(2, 4).join(', ');
+        const item = document.createElement('div');
+        item.className = 'autocomplete-item';
+        item.innerHTML = `<div>${main}</div>${sub ? `<div class="ac-sub">${sub}</div>` : ''}`;
+        item.onclick = () => {
+          const inp = document.getElementById(mode === 'from' ? 'fromAddr' : 'toAddr');
+          inp.value = main;
+          acBox.classList.remove('show');
+          updateClear(mode);
+          setMarker(parseFloat(r.lat), parseFloat(r.lon), mode);
+        };
+        acBox.appendChild(item);
+      });
+      acBox.classList.add('show');
+    })
+    .catch(() => acBox.classList.remove('show'));
+}
+
+setupAutocomplete('fromAddr', 'acFrom', 'from');
+setupAutocomplete('toAddr', 'acTo', 'to');
+
+function updateClear(mode) {
+  const val = document.getElementById(mode === 'from' ? 'fromAddr' : 'toAddr').value;
+  document.getElementById(mode === 'from' ? 'fromClear' : 'toClear').classList.toggle('show', val.length > 0);
+}
+
+function clearInput(mode) {
+  document.getElementById(mode === 'from' ? 'fromAddr' : 'toAddr').value = '';
+  updateClear(mode);
+  if (mode === 'from' && markerFrom) { map.removeLayer(markerFrom); markerFrom = null; }
+  if (mode === 'to' && markerTo) { map.removeLayer(markerTo); markerTo = null; }
+  if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+  document.getElementById('priceCard').classList.add('hidden');
+  document.getElementById('mapInfoBar').classList.add('hidden');
+  calculatedDistance = 0;
+}
+
+// ====== TYPE ======
+function selectType(type) {
+  orderType = type;
+  document.getElementById('btn-taxi').classList.toggle('active', type === 'taxi');
+  document.getElementById('btn-delivery').classList.toggle('active', type === 'delivery');
+  document.getElementById('submitIcon').textContent = type === 'taxi' ? '🚕' : '📦';
+  if (calculatedDistance > 0) {
+    const dur = calculatedEta;
+    updatePriceFromRoute(calculatedDistance, dur);
+  }
+}
+
+// ====== TABS ======
+function switchTab(name) {
+  ['order','tariff','info'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === name);
+    document.getElementById('page-' + t).classList.toggle('active', t === name);
+  });
+  document.getElementById('bottomBar').style.display = name === 'order' ? 'block' : 'none';
+  if (name === 'order') { setTimeout(() => map.invalidateSize(), 100); }
+}
+
+// ====== CALC (tariff page) ======
+function updateCalc() {
+  const dist = parseFloat(document.getElementById('calcDist').value);
+  const r = document.getElementById('calcResult');
+  if (isNaN(dist) || dist <= 0) { r.classList.remove('show'); return; }
+  r.classList.add('show');
+  document.getElementById('calcTaxi').textContent = Math.round(170 + dist * 40) + ' ₽';
+  document.getElementById('calcDelivery').textContent = Math.round(200 + dist * 50) + ' ₽';
+}
+
+// ====== SUBMIT ======
+function submitOrder() {
+  const from = document.getElementById('fromAddr').value.trim();
+  const to = document.getElementById('toAddr').value.trim();
+  const comment = document.getElementById('comment').value.trim();
+  const alertEl = document.getElementById('formAlert');
+
+  if (!from) {
+    showAlert('Укажите адрес отправления'); return;
+  }
+  if (!to) {
+    showAlert('Укажите адрес назначения'); return;
+  }
+  if (calculatedDistance <= 0) {
+    showAlert('Постройте маршрут — выберите точки на карте или введите адреса'); return;
   }
 
-  function submitOrder() {
-    const from = document.getElementById('fromAddr').value.trim();
-    const to = document.getElementById('toAddr').value.trim();
-    const dist = parseFloat(document.getElementById('distKm').value);
-    const comment = document.getElementById('comment').value.trim();
-    const alert = document.getElementById('formAlert');
+  alertEl.classList.remove('show');
 
-    if (!from || !to || isNaN(dist) || dist <= 0) {
-      alert.classList.add('show');
-      alert.textContent = '⚠️ Заполните: откуда, куда и расстояние.';
-      setTimeout(() => alert.classList.remove('show'), 3000);
-      return;
-    }
-    alert.classList.remove('show');
+  const data = {
+    order_type: orderType,
+    from_address: from,
+    to_address: to,
+    distance: parseFloat(calculatedDistance.toFixed(2)),
+    price: calculatedPrice,
+    comment: comment
+  };
 
-    let base, perKm;
-    if (orderType === 'delivery') { base = 200; perKm = 50; }
-    else { base = 170; perKm = 40; }
-    const price = Math.round(base + dist * perKm);
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  document.getElementById('submitText').textContent = 'Отправляем...';
 
-    const data = {
-      order_type: orderType,
-      from_address: from,
-      to_address: to,
-      distance: dist,
-      comment: comment,
-      price: price
-    };
-
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    document.getElementById('submitText').textContent = 'Отправляем...';
-
-    setTimeout(() => {
+  setTimeout(() => {
+    try {
       tg.sendData(JSON.stringify(data));
-    }, 300);
+    } catch(e) {
+      // Dev fallback
+      alert('Заказ: ' + JSON.stringify(data, null, 2));
+      btn.disabled = false;
+      document.getElementById('submitText').textContent = 'Оформить заказ';
+    }
+  }, 300);
+}
+
+function showAlert(msg) {
+  const el = document.getElementById('formAlert');
+  el.textContent = '⚠️ ' + msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ====== DRIVER STATUS ======
+async function loadDriverStatus() {
+  const badge = document.getElementById('driverBadge');
+  const badgeText = document.getElementById('driverBadgeText');
+  const infoCount = document.getElementById('infoDriversCount');
+  const waitingBanner = document.getElementById('waitingBanner');
+
+  try {
+    const res = await fetch('http://YOUR_SERVER_IP:8080/api/drivers', {
+      signal: AbortSignal.timeout(5000)
+    });
+    const data = await res.json();
+    driverCount = data.online || 0;
+  } catch(e) {
+    // Fallback: simulate 0 drivers if server unavailable
+    driverCount = 0;
   }
 
-  // Simulated driver status (replace with real API if needed)
-  function loadDriverStatus() {
-    const count = Math.floor(Math.random() * 5) + 1;
-    const el = document.getElementById('driverStatus');
-    el.innerHTML = count > 0
-      ? `<span style="color:#22c55e">●</span> ${count} водитель${count === 1 ? '' : count < 5 ? 'а' : 'ей'} онлайн`
-      : `<span style="color:#ef4444">●</span> Нет водителей`;
-    document.getElementById('infoDrivers').textContent = count + ' чел.';
+  if (driverCount > 0) {
+    const suffix = driverCount === 1 ? 'ь' : driverCount < 5 ? 'я' : 'ей';
+    badge.className = 'driver-badge online';
+    badgeText.textContent = `${driverCount} водител${suffix}`;
+    if (infoCount) infoCount.textContent = driverCount + ' чел. онлайн';
+    waitingBanner.classList.remove('show');
+  } else {
+    badge.className = 'driver-badge offline';
+    badgeText.textContent = 'Нет водителей';
+    if (infoCount) infoCount.textContent = 'Нет онлайн';
+    waitingBanner.classList.add('show');
   }
-  loadDriverStatus();
+}
+
+loadDriverStatus();
+setInterval(loadDriverStatus, 30000);
+
+// Invalidate map size after render
+setTimeout(() => map.invalidateSize(), 300);
 </script>
 </body>
 </html>
