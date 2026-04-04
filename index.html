@@ -681,11 +681,18 @@ async function doSend() {
     return;
   }
 
+  // Таймаут — защита от зависания на мобильном (sendData не закрыл WebApp)
+  const resetTimer = setTimeout(() => {
+    showAlert('Не удалось отправить. Попробуйте ещё раз.');
+    resetBtn();
+  }, 4000);
+
   try {
     tg.sendData(json);
-    // Успех — Telegram сам закроет WebApp и отправит данные боту
+    // Если всё ок — Telegram закроет WebApp сам, таймаут не сработает
   } catch(e) {
-    showAlert('Ошибка отправки: ' + (e.message || String(e)));
+    clearTimeout(resetTimer);
+    showAlert('Ошибка: ' + (e.message || 'откройте через кнопку в боте'));
     resetBtn();
   }
 }
