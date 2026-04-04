@@ -651,7 +651,7 @@ function updateCalc() {
 
 // URL API сервера — замените на ngrok URL когда будете использовать с телефона
 // Пример: const API_URL = 'https://xxxx-xx-xx-xx-xx.ngrok-free.app';
-const API_URL = 'https://refers-post-reform-purse.trycloudflare.com';
+const API_URL = window.TAXI_API_URL || 'http://localhost:8080';
 
 function getOrderData() {
   return {
