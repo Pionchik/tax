@@ -649,7 +649,9 @@ function updateCalc() {
 
 // ===== SUBMIT =====
 
-const BOT_TOKEN = '8392034035:AAEsDQV3gj8sjtLuPaFNj1b6yVLYuXrcN9k';
+// URL API сервера — замените на ngrok URL когда будете использовать с телефона
+// Пример: const API_URL = 'https://xxxx-xx-xx-xx-xx.ngrok-free.app';
+const API_URL = 'https://refers-post-reform-purse.trycloudflare.com';
 
 function getOrderData() {
   return {
@@ -673,26 +675,36 @@ function validateForm() {
 }
 
 async function doSend() {
-  const json = JSON.stringify(getOrderData());
-
   if (!tg) {
     showAlert('Откройте через кнопку в боте');
     resetBtn();
     return;
   }
 
-  // Таймаут — защита от зависания на мобильном (sendData не закрыл WebApp)
-  const resetTimer = setTimeout(() => {
-    showAlert('Не удалось отправить. Попробуйте ещё раз.');
+  const userId = tg.initDataUnsafe?.user?.id;
+  if (!userId) {
+    showAlert('Не удалось получить ID пользователя. Откройте через бота.');
     resetBtn();
-  }, 4000);
+    return;
+  }
 
   try {
-    tg.sendData(json);
-    // Если всё ок — Telegram закроет WebApp сам, таймаут не сработает
+    const res = await fetch(`${API_URL}/api/order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, data: getOrderData() })
+    });
+
+    const result = await res.json();
+    if (result.ok) {
+      // Успех — закрываем WebApp
+      tg.close();
+    } else {
+      showAlert('Ошибка: ' + (result.error || 'попробуйте снова'));
+      resetBtn();
+    }
   } catch(e) {
-    clearTimeout(resetTimer);
-    showAlert('Ошибка: ' + (e.message || 'откройте через кнопку в боте'));
+    showAlert('Нет связи с сервером. Проверьте подключение.');
     resetBtn();
   }
 }
