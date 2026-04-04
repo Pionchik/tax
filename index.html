@@ -690,7 +690,7 @@ async function doSend() {
   }
 
   // Формируем текст команды — бот получит это как сообщение
-  const text = '🚕ORDER:' + JSON.stringify(data);
+  const text = 'TAXI_ORDER:' + JSON.stringify(data);
 
   try {
     const resp = await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
@@ -739,10 +739,14 @@ function submitOrder() {
 // MainButton — нативная кнопка Telegram (мобильный)
 function setupMainButton() {
   if (!tg || !tg.MainButton) return;
+
   const MB = tg.MainButton;
-  MB.setText('Оформить заказ 🚕');
   MB.color     = '#f5c518';
   MB.textColor = '#000000';
+  MB.setText('Оформить заказ 🚕');
+
+  // Скрываем нашу html-кнопку — используем только нативную Telegram кнопку
+  document.getElementById('bottomBar').style.display = 'none';
 
   function updateMB() {
     const from = document.getElementById('fromAddr').value.trim();
