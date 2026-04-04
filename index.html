@@ -120,6 +120,7 @@ html, body {
   color: var(--text); font-size: 14px; font-family: 'Manrope', system-ui;
   font-weight: 500; outline: none; transition: border-color 0.2s, background 0.2s;
   -webkit-appearance: none;
+  appearance: none;
 }
 .input-field:focus { border-color: var(--accent); background: var(--surface3); }
 .input-field::placeholder { color: var(--text3); }
@@ -400,13 +401,16 @@ textarea.input-field { resize: none; height: 70px; padding-top: 13px; font-famil
 
 <script>
 // ===== TELEGRAM =====
+// На мобильном initData может быть пустым при первом рендере — проверяем только наличие WebApp
 const tg = (window.Telegram && window.Telegram.WebApp)
   ? window.Telegram.WebApp
-  : { expand(){}, ready(){}, sendData(d){ alert('DEV:\n' + d); }, colorScheme: 'dark' };
-tg.expand();
-tg.ready();
+  : null;
 
-if (tg.colorScheme === 'light') {
+const isTelegram = !!tg;
+
+if (tg) { tg.expand(); tg.ready(); }
+
+if (tg && tg.colorScheme === 'light') {
   const s = document.documentElement.style;
   s.setProperty('--bg','#f2f2f7'); s.setProperty('--surface','#ffffff');
   s.setProperty('--surface2','#f8f8fc'); s.setProperty('--surface3','#ededf2');
@@ -520,6 +524,9 @@ function applyRoute(dist, eta) {
   document.getElementById('mapTime').textContent  = eta + ' мин';
   document.getElementById('mapPrice').textContent = calcPrice + ' ₽';
   document.getElementById('mapInfoBar').classList.remove('hidden');
+
+  // Обновляем MainButton если настроена
+  if (window._onRouteBuilt) window._onRouteBuilt();
 }
 
 function clearRoute() {
@@ -641,40 +648,115 @@ function updateCalc() {
 }
 
 // ===== SUBMIT =====
-function submitOrder() {
-  const from    = document.getElementById('fromAddr').value.trim();
-  const to      = document.getElementById('toAddr').value.trim();
-  const comment = document.getElementById('comment').value.trim();
 
-  if (!from)       { showAlert('Укажите адрес отправления'); return; }
-  if (!to)         { showAlert('Укажите адрес назначения'); return; }
-  if (calcDist<=0) { showAlert('Постройте маршрут — нажмите на карту или введите адреса'); return; }
+const BOT_TOKEN = '8392034035:AAEsDQV3gj8sjtLuPaFNj1b6yVLYuXrcN9k';
 
-  document.getElementById('formAlert').classList.remove('show');
-
-  const data = {
+function getOrderData() {
+  return {
     order_type:   orderType,
-    from_address: from,
-    to_address:   to,
+    from_address: document.getElementById('fromAddr').value.trim(),
+    to_address:   document.getElementById('toAddr').value.trim(),
     distance:     parseFloat(calcDist.toFixed(2)),
     price:        calcPrice,
-    comment:      comment
+    comment:      document.getElementById('comment').value.trim(),
+    from_lat:     mFrom ? mFrom.getLatLng().lat : null,
+    from_lon:     mFrom ? mFrom.getLatLng().lng : null
   };
-
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  document.getElementById('submitText').textContent = 'Отправляем...';
-
-  setTimeout(() => {
-    try {
-      tg.sendData(JSON.stringify(data));
-    } catch(e) {
-      btn.disabled = false;
-      document.getElementById('submitText').textContent = 'Оформить заказ';
-      showAlert('Ошибка отправки. Попробуйте снова.');
-    }
-  }, 250);
 }
+
+function validateForm() {
+  const d = getOrderData();
+  if (!d.from_address) { showAlert('Укажите адрес отправления'); return false; }
+  if (!d.to_address)   { showAlert('Укажите адрес назначения');  return false; }
+  if (calcDist <= 0)   { showAlert('Постройте маршрут — нажмите на карту или введите адреса'); return false; }
+  return true;
+}
+
+async function doSend() {
+  const data = getOrderData();
+
+  // Получаем tg_id пользователя из initData
+  let userId = null;
+  try {
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+      userId = tg.initDataUnsafe.user.id;
+    }
+  } catch(e) {}
+
+  if (!userId) {
+    showAlert('Не удалось получить ID пользователя. Попробуйте перезапустить бота командой /start');
+    resetBtn();
+    return;
+  }
+
+  // Формируем текст команды — бот получит это как сообщение
+  const text = '🚕ORDER:' + JSON.stringify(data);
+
+  try {
+    const resp = await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: userId,
+        text: text
+      })
+    });
+    const result = await resp.json();
+    if (result.ok) {
+      // Закрываем WebApp — бот обработает сообщение
+      if (tg) tg.close();
+    } else {
+      showAlert('Ошибка: ' + (result.description || 'попробуйте снова'));
+      resetBtn();
+    }
+  } catch(e) {
+    showAlert('Ошибка сети. Проверьте интернет и попробуйте снова.');
+    resetBtn();
+  }
+}
+
+function resetBtn() {
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('submitText').textContent = 'Оформить заказ';
+  if (tg && tg.MainButton) {
+    tg.MainButton.enable();
+    tg.MainButton.setText('Оформить заказ 🚕');
+  }
+}
+
+function submitOrder() {
+  if (!validateForm()) return;
+  document.getElementById('formAlert').classList.remove('show');
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('submitText').textContent = 'Отправляем...';
+  if (tg && tg.MainButton) {
+    tg.MainButton.disable();
+    tg.MainButton.setText('Отправляем...');
+  }
+  doSend();
+}
+
+// MainButton — нативная кнопка Telegram (мобильный)
+function setupMainButton() {
+  if (!tg || !tg.MainButton) return;
+  const MB = tg.MainButton;
+  MB.setText('Оформить заказ 🚕');
+  MB.color     = '#f5c518';
+  MB.textColor = '#000000';
+
+  function updateMB() {
+    const from = document.getElementById('fromAddr').value.trim();
+    const to   = document.getElementById('toAddr').value.trim();
+    (from && to && calcDist > 0) ? MB.show() : MB.hide();
+  }
+
+  document.getElementById('fromAddr').addEventListener('input', updateMB);
+  document.getElementById('toAddr').addEventListener('input',   updateMB);
+  MB.onClick(submitOrder);
+  window._onRouteBuilt = updateMB;
+}
+
+setupMainButton();
 
 function showAlert(msg) {
   const el = document.getElementById('formAlert');
