@@ -673,44 +673,19 @@ function validateForm() {
 }
 
 async function doSend() {
-  const data = getOrderData();
+  const json = JSON.stringify(getOrderData());
 
-  // Получаем tg_id пользователя из initData
-  let userId = null;
-  try {
-    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
-      userId = tg.initDataUnsafe.user.id;
-    }
-  } catch(e) {}
-
-  if (!userId) {
-    showAlert('Не удалось получить ID пользователя. Попробуйте перезапустить бота командой /start');
+  if (!tg) {
+    showAlert('Откройте через кнопку в боте');
     resetBtn();
     return;
   }
 
-  // Формируем текст команды — бот получит это как сообщение
-  const text = 'TAXI_ORDER:' + JSON.stringify(data);
-
   try {
-    const resp = await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: userId,
-        text: text
-      })
-    });
-    const result = await resp.json();
-    if (result.ok) {
-      // Закрываем WebApp — бот обработает сообщение
-      if (tg) tg.close();
-    } else {
-      showAlert('Ошибка: ' + (result.description || 'попробуйте снова'));
-      resetBtn();
-    }
+    tg.sendData(json);
+    // Успех — Telegram сам закроет WebApp и отправит данные боту
   } catch(e) {
-    showAlert('Ошибка сети. Проверьте интернет и попробуйте снова.');
+    showAlert('Ошибка отправки: ' + (e.message || String(e)));
     resetBtn();
   }
 }
