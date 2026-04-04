@@ -649,9 +649,7 @@ function updateCalc() {
 
 // ===== SUBMIT =====
 
-// URL API сервера — замените на ngrok URL когда будете использовать с телефона
-// Пример: const API_URL = 'https://xxxx-xx-xx-xx-xx.ngrok-free.app';
-const API_URL = window.TAXI_API_URL || 'http://localhost:8080';
+const BOT_TOKEN = '8392034035:AAEsDQV3gj8sjtLuPaFNj1b6yVLYuXrcN9k';
 
 function getOrderData() {
   return {
@@ -675,36 +673,18 @@ function validateForm() {
 }
 
 async function doSend() {
+  const json = JSON.stringify(getOrderData());
+
   if (!tg) {
     showAlert('Откройте через кнопку в боте');
     resetBtn();
     return;
   }
 
-  const userId = tg.initDataUnsafe?.user?.id;
-  if (!userId) {
-    showAlert('Не удалось получить ID пользователя. Откройте через бота.');
-    resetBtn();
-    return;
-  }
-
   try {
-    const res = await fetch(`${API_URL}/api/order`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: userId, data: getOrderData() })
-    });
-
-    const result = await res.json();
-    if (result.ok) {
-      // Успех — закрываем WebApp
-      tg.close();
-    } else {
-      showAlert('Ошибка: ' + (result.error || 'попробуйте снова'));
-      resetBtn();
-    }
+    tg.sendData(json);
   } catch(e) {
-    showAlert('Нет связи с сервером. Проверьте подключение.');
+    showAlert('Ошибка отправки: ' + (e.message || String(e)));
     resetBtn();
   }
 }
